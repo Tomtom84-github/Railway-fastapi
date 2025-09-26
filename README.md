@@ -1,29 +1,32 @@
----
-title: FastAPI
-description: A FastAPI server
-tags:
-  - fastapi
-  - hypercorn
-  - python
----
+# FastMCP HTTP Time Server
 
-# FastAPI Example
+Dieses Repository stellt einen minimalen [FastMCP](https://gofastmcp.com/) Server bereit,
+der über den HTTP (Streamable) Transport die aktuelle Uhrzeit als Tool anbietet. Die App ist
+bereit für Railway-Deployments, funktioniert aber ebenso lokal.
 
-This example starts up a [FastAPI](https://fastapi.tiangolo.com/) server.
+## 🚀 Setup
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/-NvLj4?referralCode=CRJ8FE)
-## ✨ Features
+```bash
+pip install -r requirements.txt
+```
 
-- FastAPI
-- [Hypercorn](https://hypercorn.readthedocs.io/)
-- Python 3
+## ▶️ Startbefehle
 
-## 💁‍♀️ How to use
+- Produktion (Railway o. Ä.):
+  ```bash
+  uvicorn main:app --host 0.0.0.0 --port 8000
+  ```
+- Lokal als Skript mit integriertem Server:
+  ```bash
+  python main.py
+  ```
 
-- Clone locally and install packages with pip using `pip install -r requirements.txt`
-- Run locally using `hypercorn main:app --reload`
+## 🛠️ Tooling
 
-## 📝 Notes
+Der Server registriert ein einziges Tool `current_time`, welches den aktuellen UTC-Zeitstempel
+im ISO-8601-Format zurückgibt.
 
-- To learn about how to use FastAPI with most of its features, you can visit the [FastAPI Documentation](https://fastapi.tiangolo.com/tutorial/)
-- To learn about Hypercorn and how to configure it, read their [Documentation](https://hypercorn.readthedocs.io/)
+## 📚 Ressourcen
+
+- FastMCP Dokumentation: https://gofastmcp.com/
+- Streamable HTTP Deployment Guide: https://gofastmcp.com/deployment/running-server

@@ -1,7 +1,24 @@
-from fastapi import FastAPI
+"""FastMCP time server ready for HTTP deployments."""
+from __future__ import annotations
 
-app = FastAPI()
+from datetime import datetime, timezone
 
-@app.get("/")
-async def root():
-    return {"greeting": "Hello, World!", "message": "Welcome to FastAPI!"}
+from fastmcp import FastMCP
+
+mcp = FastMCP("time-mcp-server")
+
+
+@mcp.tool(description="Gibt die aktuelle Zeit im ISO-8601-Format zurück.")
+def current_time() -> str:
+    """Return the current UTC time as an ISO formatted string."""
+
+    return datetime.now(timezone.utc).isoformat()
+
+
+# The ASGI app Railway (or any other platform) can serve via Uvicorn/Hypercorn.
+app = mcp.http_app()
+
+
+if __name__ == "__main__":
+    # Run the HTTP transport directly for local testing.
+    mcp.run(transport="http", host="0.0.0.0", port=8000)
