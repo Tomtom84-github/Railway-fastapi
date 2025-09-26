@@ -1,8 +1,5 @@
-# Test-Kommentar ergänzt via MCP-Time API
-#IyBtYWluLnB5...
-
 # main.py
-"""FastMCP time server + flexible GitHub repo tools (read/write/list/delete via PAT)."""
+"""FastMCP time server + flexible GitHub repo tools (read/write/list/delete via PAT) + Render deploy hook."""
 from __future__ import annotations
 
 import base64
@@ -337,14 +334,13 @@ def github_delete_file(
 )
 def github_list_dir(owner: str, repo: str, path: str | None = "", ref: str | None = None) -> List[dict]:
     client = GitHubClient(_require_token())
-    # Leerer Pfad → Root
     path_param = path or ""
     data = client.get_content(owner, repo, path_param, ref=ref)
     items = data if isinstance(data, list) else [data]
     result: List[dict] = []
     for it in items:
         result.append({
-            "type": it.get("type"),          # 'file' | 'dir' | 'symlink' | 'submodule'
+            "type": it.get("type"),
             "name": it.get("name"),
             "path": it.get("path"),
             "sha": it.get("sha"),
@@ -379,6 +375,81 @@ def github_list_tree(
         "count": len(entries),
         "entries": entries,  # each: {path, mode, type, sha, size}
     }
+
+# =========================
+# Render.com: Deploy-Webhook
+# =========================
+
+RENDER_DEPLOY_HOOK_ENV = "RENDER_DEPLOY_HOOK_URL"
+
+def _resolve_render_webhook(full_url: str | None, service_id: str | None, key: str | None) -> str:
+    """
+    Liefert die endgültige Webhook-URL:
+    - 1) explizit übergeben (full_url) ODER
+    - 2) aus service_id + key gebaut ODER
+    - 3) aus ENV RENDER_DEPLOY_HOOK_URL
+    """
+    if full_url:
+        return full_url.strip()
+    if service_id and key:
+        return f"https://api.render.com/deploy/{service_id.strip()}?key={key.strip()}"
+    env_url = os.getenv(RENDER_DEPLOY_HOOK_ENV)
+    if env_url:
+        return env_url.strip()
+    raise RuntimeError(
+        "Keine Render-Webhook-URL gefunden. Entweder 'full_url' übergeben, "
+        "oder 'service_id' + 'key', oder setze die Umgebungsvariable RENDER_DEPLOY_HOOK_URL."
+    )
+
+@mcp.tool(
+    description=(
+        "Löst ein Deployment auf Render.com aus (Deploy Hook). Standard: POST auf den Webhook. "
+        "Parameter: full_url ODER (service_id + key). Fallback: ENV 'RENDER_DEPLOY_HOOK_URL'."
+    )
+)
+def render_trigger_deploy(
+    full_url: str | None = None,
+    service_id: str | None = None,
+    key: str | None = None,
+    method: str | None = "POST",
+    timeout_seconds: float | int = 20,
+) -> dict:
+    """
+    Triggert den Deploy-Hook.
+    Gibt Statuscode, Text/JSON und die effektive URL zurück.
+    """
+    url = _resolve_render_webhook(full_url=full_url, service_id=service_id, key=key)
+    meth = (method or "POST").upper()
+
+    try:
+        with httpx.Client(timeout=float(timeout_seconds), follow_redirects=True) as c:
+            if meth == "POST":
+                r = c.post(url, json={})
+            elif meth == "GET":
+                r = c.get(url)
+            else:
+                raise ValueError(f"Unsupported method: {meth} (verwende POST oder GET)")
+
+        try:
+            body = r.json()
+        except Exception:
+            body = r.text
+
+        return {
+            "ok": r.is_success,
+            "status_code": r.status_code,
+            "url": str(r.request.url),
+            "method": meth,
+            "headers_sent": dict(r.request.headers),
+            "response": body,
+        }
+    except httpx.HTTPError as e:
+        return {
+            "ok": False,
+            "error": f"http_error: {type(e).__name__}: {e}",
+            "url": url,
+            "method": meth,
+        }
 
 # =========================
 # ASGI
