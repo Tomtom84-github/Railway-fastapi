@@ -1,2 +1,2 @@
-fastmcp>=0.1.0
+fastmcp[http]>=2.12.3
 uvicorn>=0.23.0
