@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 
 from fastmcp import FastMCP
 
+__all__ = ["app", "mcp"]
+
 mcp = FastMCP("time-mcp-server")
 
 
@@ -17,6 +19,12 @@ def current_time() -> str:
 
 # The ASGI app Railway (or any other platform) can serve via Uvicorn/Hypercorn.
 app = mcp.http_app()
+
+
+def create_app() -> object:
+    """Return the ASGI app for ASGI servers such as Uvicorn."""
+
+    return app
 
 
 if __name__ == "__main__":
